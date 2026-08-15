@@ -1,9 +1,11 @@
 print("Loading dependencies ...")
 import pandas as pd
 from analysis.fold_change import fold_change
+from analysis.ht_fc_comparison import ht_fc_comparison
 from analysis.hypothesis_testing import hypothesis_testing
-from config.paths import HYPOTHESIS_INDEPENDENT_DEGS_PATH, HYPOTHESIS_PAIRED_DEGS_PATH
+from config.paths import HYPOTHESIS_INDEPENDENT_DEGS_PATH, HYPOTHESIS_PAIRED_DEGS_PATH, DEGS_COMPARISON_PATH, VOLCANO_PLOT_GRAPH_PATH
 from bioinfokit import visuz
+from config.settings import P_CUTOFF
 import gseapy as gp
 import numpy as np
 
@@ -20,11 +22,11 @@ cancerous_samples = cancerous_df[cancerous_df.columns[0:]].values
 # ---------------------------------------------------------
 print("Hypothesis testing ...")
 
-[independent_degs, paired_degs, gene_stats_summary] = hypothesis_testing(healthy_samples, cancerous_samples)
+[independent_ht_degs, paired_ht_degs, gene_ht_summary] = hypothesis_testing(healthy_samples, cancerous_samples)
 
 # Save 
-pd.DataFrame(independent_degs).to_csv(HYPOTHESIS_INDEPENDENT_DEGS_PATH, index=False) # Save independent_degs into a csv file
-pd.DataFrame(independent_degs).to_csv(HYPOTHESIS_PAIRED_DEGS_PATH, index=False) # Save paired_degs into a csv file
+pd.DataFrame(independent_ht_degs).to_csv(HYPOTHESIS_INDEPENDENT_DEGS_PATH, index=False) # Save independent_degs as a csv file
+pd.DataFrame(paired_ht_degs).to_csv(HYPOTHESIS_PAIRED_DEGS_PATH, index=False) # Save paired_degs as a csv file
 
 
 # ---------------------------------------------------------
@@ -36,14 +38,12 @@ print("Fold change ...")
 
 
 # ---------------------------------------------------------
-#  Gene Summary 
+#  Hypothesis testing vs. Fold change 
 # ---------------------------------------------------------
 print("Gene data summary ...")
 
-gene_stats_summary_df = pd.DataFrame(gene_stats_summary)
-gene_fc_summary_df = pd.DataFrame(gene_fc_summary)
-
-gene_summary_df = pd.merge(gene_fc_summary_df, gene_stats_summary_df, on="Hugo_Symbol", how="inner")
+gene_summary_df = ht_fc_comparison(pd.DataFrame(gene_ht_summary), pd.DataFrame(gene_fc_summary))
+pd.DataFrame(gene_summary_df).to_csv(DEGS_COMPARISON_PATH, index=False) # Save gene comparison as a csv file
 
 # ---------------------------------------------------------
 # Volcano Plot
@@ -57,10 +57,10 @@ visuz.GeneExpression.volcano(
     plotlegend=True,
     legendpos="upper right",
     lfc_thr=(t, t),
-    pv_thr=(0.05, 0.05),
+    pv_thr=(P_CUTOFF, P_CUTOFF),
     show=False,
     figtype="png",
-    figname="results/volcano_plot"
+    figname=VOLCANO_PLOT_GRAPH_PATH
 )
 
 # ---------------------------------------------------------
@@ -71,20 +71,16 @@ print("GSEA ...")
 # # Indexing with Hugo_Symbol
 indexed_gene_summary_df = gene_summary_df.set_index('Hugo_Symbol')
 
+indexed_paired_degs_df = indexed_gene_summary_df[indexed_gene_summary_df["Is_DEG_Paired"]]
+
+indexed_paired_degs_df["score"] = np.sign(indexed_gene_summary_df["Log2FC"]) * - np.log10(indexed_gene_summary_df["P_Paired"])
+
 # # Rank all genes by Log2FC for GSEA Preranked
-ranked_genes = indexed_gene_summary_df['Log2FC'].sort_values(ascending=False)
+ranked_genes = indexed_paired_degs_df['score'].sort_values(ascending=False)
 
-# print(ranked_genes.value_counts())
-
-# FORCE STRICT UNIQUENESS (Fixes duplicate warning AND unlocks full PNG exports)
-# Adding a micro-gradient (1e-12) guarantees zero identical float values
-unique_offsets = np.linspace(1e-12, 1e-15, num=len(ranked_genes))
-ranked_genes_clean = (ranked_genes + unique_offsets).sort_values(ascending=False)
-
-
-# 5. Run GSEA Preranked with explicit plot export options
+# Run GSEA Preranked with explicit plot export options
 gsea_res = gp.prerank(
-    rnk=ranked_genes_clean,
+    rnk=ranked_genes,
     gene_sets='MSigDB_Hallmark_2020',
     threads=4,                  # Avoids deprecation warning
     min_size=5,

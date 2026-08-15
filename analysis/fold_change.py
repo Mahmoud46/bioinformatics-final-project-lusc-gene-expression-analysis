@@ -1,11 +1,10 @@
-from config.settings import T_FOLD_CHANGE
+from config.settings import FC_CUTOFF
 import numpy as np
 
 def fold_change(healthy_samples, cancerous_samples):
-    t = np.log2(T_FOLD_CHANGE) # Calculate fc threshold
+    t = np.log2(FC_CUTOFF) # Calculate fc threshold
     fc_degs = [] 
     gene_fc_summary = []
-
 
     for i in range(len(healthy_samples)):
         healthy_sample = healthy_samples[i][2::] # Sample without Hugo_Symbol or Entrez_Gene_Id
