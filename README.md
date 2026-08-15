@@ -63,7 +63,9 @@ dge_lusc/
    ![Volcano Plot](./results/volcano_plot.png)
 5. **Gene Set Enrichment Analysis (GSEA)**
    `results/gsea_results`
-   - Extracts significant paired DEGs and computes a continuous ranking metric: $$\text{Score} = \text{sign}(\log_2 \text{FC}) \times \left(-\log_{10}(P_{\text{paired}})\right)$$ This metric captures both directional change and statistical confidence, passing the ranked genome to `gseapy.prerank` for pathway scoring against `MSigDB_Hallmark_2020`.
+   - Extracts significant paired DEGs and computes a continuous ranking metric:
+     $$\text{Score} = \text{sign}(\log_2 \text{FC}) \times \left(-\log_{10}(P_{\text{paired}})\right)$$
+     This metric captures both directional change and statistical confidence, passing the ranked genome to `gseapy.prerank` for pathway scoring against `MSigDB_Hallmark_2020`.
 
 ![Volcano Plot](./results/gsea_graphs.png)
 
