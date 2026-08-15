@@ -23,4 +23,4 @@ The dataset consists of two tab-separated `.txt` FPKM gene expression files loca
 
 ---
 
-© December 2022 Mahmoud Zakaria, All rights reserved.s
+© December 2022 Mahmoud Zakaria, All rights reserved.
